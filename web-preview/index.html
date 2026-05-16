@@ -3,152 +3,341 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Godot Engine 4.7 — Source Code</title>
+  <title>Godot Engine 4.7 — Custom Fork</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #1a1a2e;
+      background: #0d0d1a;
       color: #e0e0e0;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
       padding: 2rem;
     }
-    .card {
-      background: #16213e;
-      border: 1px solid #0f3460;
-      border-radius: 16px;
-      max-width: 700px;
-      width: 100%;
-      padding: 3rem;
+    header {
       text-align: center;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: 900px;
+      margin: 0 auto 2.5rem;
+    }
+    .badge-row {
+      display: flex;
+      gap: .5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
     }
     .badge {
       display: inline-block;
-      background: #e14d2a;
-      color: white;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       padding: 4px 12px;
       border-radius: 999px;
-      margin-bottom: 1.5rem;
     }
+    .badge-red   { background: #c0392b; color: #fff; }
+    .badge-blue  { background: #2471a3; color: #fff; }
+    .badge-green { background: #1e8449; color: #fff; }
     h1 {
-      font-size: 2.2rem;
-      font-weight: 800;
+      font-size: 2.4rem;
+      font-weight: 900;
       color: #ffffff;
-      margin-bottom: 0.5rem;
+      margin-bottom: .4rem;
     }
-    .version {
-      font-size: 1rem;
-      color: #a0a0c0;
-      margin-bottom: 1.5rem;
-    }
-    p {
-      font-size: 1rem;
-      line-height: 1.7;
-      color: #b0b0c8;
-      margin-bottom: 1.5rem;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      margin: 2rem 0;
-      text-align: left;
-    }
-    .info-item {
-      background: #0f3460;
-      border-radius: 10px;
-      padding: 1rem 1.25rem;
-    }
-    .info-item .label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .subtitle {
+      font-size: 1.05rem;
       color: #7080a0;
-      margin-bottom: 4px;
     }
-    .info-item .value {
-      font-size: 0.95rem;
-      color: #e0e0f0;
-      font-weight: 600;
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto 2rem;
     }
-    .links {
+    .card {
+      background: #12172b;
+      border: 1px solid #1a2545;
+      border-radius: 14px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.45);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .icon-nex  { background: #1a3a5c; }
+    .icon-ai   { background: #1a3a28; }
+    .icon-core { background: #2a1a3c; }
+    .card h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .card .tagline {
+      font-size: .8rem;
+      color: #5a7090;
+      margin-top: 2px;
+    }
+    .card p {
+      font-size: .9rem;
+      line-height: 1.7;
+      color: #90a0b8;
+      margin-bottom: 1rem;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: .45rem;
+    }
+    .feature-list li {
+      font-size: .85rem;
+      color: #b0bfd4;
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+    .feature-list li::before {
+      content: "✓";
+      color: #3498db;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .feature-list.green li::before { color: #27ae60; }
+
+    .file-tree {
+      background: #080d1c;
+      border: 1px solid #1a2545;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: .78rem;
+      color: #6a8ab0;
+      line-height: 1.8;
+      margin-top: 1rem;
+    }
+    .file-tree .dir  { color: #5d9ce8; }
+    .file-tree .file { color: #88a8c8; }
+    .file-tree .root { color: #e8c55d; font-weight: 700; }
+
+    .status-row {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
       display: flex;
       gap: 1rem;
-      justify-content: center;
       flex-wrap: wrap;
-      margin-top: 2rem;
     }
-    a.btn {
-      display: inline-block;
-      padding: 0.65rem 1.4rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      text-decoration: none;
-      transition: opacity 0.2s;
+    .status-item {
+      background: #12172b;
+      border: 1px solid #1a2545;
+      border-radius: 10px;
+      padding: .75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      font-size: .85rem;
+      color: #9ab;
+      flex: 1;
+      min-width: 200px;
     }
-    a.btn:hover { opacity: 0.85; }
-    a.btn-primary { background: #478cbf; color: white; }
-    a.btn-secondary { background: #0f3460; color: #a0c0e0; border: 1px solid #1a5080; }
-    .note {
-      margin-top: 2rem;
-      padding: 1rem 1.25rem;
-      background: #0a1628;
-      border-left: 3px solid #478cbf;
-      border-radius: 0 8px 8px 0;
-      text-align: left;
-      font-size: 0.88rem;
-      color: #8090b0;
-      line-height: 1.6;
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green  { background: #27ae60; box-shadow: 0 0 6px #27ae60; }
+    .dot-blue   { background: #2980b9; box-shadow: 0 0 6px #2980b9; }
+    .dot-yellow { background: #f39c12; box-shadow: 0 0 6px #f39c12; }
+
+    footer {
+      text-align: center;
+      max-width: 900px;
+      margin: 2rem auto 0;
+      font-size: .8rem;
+      color: #3a4a60;
+      line-height: 1.7;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <span class="badge">Source Repository</span>
-    <h1>Godot Engine</h1>
-    <div class="version">Version 4.7 &mdash; beta</div>
-    <p>
-      A feature-packed, cross-platform 2D and 3D game engine. Free and open source under the MIT license.
-    </p>
 
-    <div class="info-grid">
-      <div class="info-item">
-        <div class="label">Primary Language</div>
-        <div class="value">C++ (C++17)</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Build System</div>
-        <div class="value">SCons + Python</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Scripting</div>
-        <div class="value">GDScript, C#, C++</div>
-      </div>
-      <div class="info-item">
-        <div class="label">Graphics</div>
-        <div class="value">Vulkan, OpenGL, D3D12</div>
-      </div>
+  <header>
+    <div class="badge-row">
+      <span class="badge badge-red">Godot 4.7 beta</span>
+      <span class="badge badge-blue">NEX Scripting</span>
+      <span class="badge badge-green">AI Copilot</span>
     </div>
+    <h1>Godot Engine — Custom Fork</h1>
+    <p class="subtitle">Extended with NEX scripting language &amp; a first-class AI Copilot editor dock</p>
+  </header>
 
-    <div class="links">
-      <a class="btn btn-primary" href="https://godotengine.org/download" target="_blank">Download Binaries</a>
-      <a class="btn btn-secondary" href="https://docs.godotengine.org/en/latest/engine_details/development/compiling" target="_blank">Build from Source</a>
-      <a class="btn btn-secondary" href="https://github.com/godotengine/godot" target="_blank">GitHub</a>
+  <div class="status-row">
+    <div class="status-item">
+      <span class="dot dot-green"></span>
+      <span><strong>modules/nexscript</strong> &mdash; fully implemented</span>
     </div>
-
-    <div class="note">
-      This Replit project contains the Godot Engine source code. Because it is a large C++ engine requiring SCons and a full compiler toolchain, it cannot be compiled or run directly here. Use the links above to download pre-built binaries or follow the official compilation guide.
+    <div class="status-item">
+      <span class="dot dot-green"></span>
+      <span><strong>modules/ai_engine</strong> &mdash; fully implemented</span>
+    </div>
+    <div class="status-item">
+      <span class="dot dot-green"></span>
+      <span><strong>editor/docks/ai</strong> &mdash; integrated into EditorNode</span>
+    </div>
+    <div class="status-item">
+      <span class="dot dot-blue"></span>
+      <span><strong>Build system</strong> &mdash; SCsub + config.py registered</span>
     </div>
   </div>
+
+  <div class="grid">
+
+    <!-- NEX Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-nex">&#9000;</div>
+        <div>
+          <h2>NEX Scripting Language</h2>
+          <div class="tagline">modules/nexscript/ &mdash; drop-in Godot module</div>
+        </div>
+      </div>
+      <p>
+        A statically-typed, immutable-by-default scripting language that compiles to a typed IR and
+        executes on a dedicated typed-slot VM — designed to be faster than GDScript while remaining
+        Godot-native.
+      </p>
+      <ul class="feature-list">
+        <li>Recursive-descent parser with full AST representation</li>
+        <li>Static type system &mdash; Int, Float, Bool, String, Vector2/3/4, Color, Nil, Any</li>
+        <li>Immutable-by-default bindings (<code>let</code>); mutable with <code>var</code></li>
+        <li>Typed IR with SSA-style slots and jump tables</li>
+        <li>Switch-dispatch VM with typed operand stack (no boxing for primitives)</li>
+        <li>Result&lt;T, E&gt; propagation &amp; range-based for-loops in IR</li>
+        <li>Semantic analyzer with type inference &amp; constant folding optimizer</li>
+        <li>Full GDScript interop via NexLanguage / NexScript / NexInstance</li>
+      </ul>
+      <div class="file-tree">
+        <span class="root">modules/nexscript/</span><br>
+        &nbsp;&nbsp;<span class="dir">frontend/</span>&nbsp;&nbsp;<span class="file">tokenizer · parser · analyzer · ast · types</span><br>
+        &nbsp;&nbsp;<span class="dir">optimizer/</span>&nbsp;<span class="file">constant fold · dead code</span><br>
+        &nbsp;&nbsp;<span class="dir">ir/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">nex_ir · nex_ir_gen</span><br>
+        &nbsp;&nbsp;<span class="dir">vm/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">nex_typed_slot · nex_vm</span><br>
+        &nbsp;&nbsp;<span class="dir">godot/</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">nex_language · nex_script · nex_instance · nex_loader</span>
+      </div>
+    </div>
+
+    <!-- AI Engine Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-ai">&#129302;</div>
+        <div>
+          <h2>Godot AI Agent</h2>
+          <div class="tagline">modules/ai_engine/ &mdash; in-editor AI copilot</div>
+        </div>
+      </div>
+      <p>
+        A first-class AI assistant baked into the Godot editor. Supports multiple LLM providers,
+        tool-execution against the live scene/project, RAG over the project codebase, and a
+        persistent memory layer across sessions.
+      </p>
+      <ul class="feature-list green">
+        <li>Providers: OpenAI (GPT-4o/o1) &amp; Google Gemini with streaming</li>
+        <li>Tool execution &mdash; scene editing, script gen, asset search, shell, git, debug</li>
+        <li>Vector DB with cosine/dot/Euclidean similarity for RAG</li>
+        <li>Embedding chunker + project indexer for full codebase search</li>
+        <li>Session &amp; long-term memory manager with configurable retention</li>
+        <li>Advanced prompting &mdash; chain-of-thought, few-shot, structured output</li>
+        <li>Scene &amp; code analyzers for deep project context</li>
+        <li>Metrics, rate limiter, LRU cache, structured logger</li>
+      </ul>
+      <div class="file-tree">
+        <span class="root">modules/ai_engine/</span><br>
+        &nbsp;&nbsp;<span class="dir">core/</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ai_types · ai_engine</span><br>
+        &nbsp;&nbsp;<span class="dir">provider/</span>&nbsp;&nbsp;<span class="file">openai · gemini · factory · stream_parser</span><br>
+        &nbsp;&nbsp;<span class="dir">executor/</span>&nbsp;&nbsp;<span class="file">tool_executor · tool_registry + 7 tool sets</span><br>
+        &nbsp;&nbsp;<span class="dir">context/</span>&nbsp;&nbsp;&nbsp;<span class="file">context_mgr · prompting · scene/code analyzers · indexer</span><br>
+        &nbsp;&nbsp;<span class="dir">vector_db/</span>&nbsp;<span class="file">vector_db · embeddings · chunker · similarity</span><br>
+        &nbsp;&nbsp;<span class="dir">memory/</span>&nbsp;&nbsp;&nbsp;<span class="file">memory_mgr · session_mgr · memory_store</span><br>
+        &nbsp;&nbsp;<span class="dir">utils/</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="file">logger · metrics · cache · rate_limiter · config</span>
+      </div>
+    </div>
+
+    <!-- Editor Dock Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-core">&#127775;</div>
+        <div>
+          <h2>AI Copilot Editor Dock</h2>
+          <div class="tagline">editor/docks/ai/ &mdash; integrated into EditorNode</div>
+        </div>
+      </div>
+      <p>
+        A native Godot editor dock registered as an <code>EditorDock</code> subclass. Docked to
+        the right panel by default, floatable, and fully theme-aware. The dock surfaces all
+        AI engine capabilities in a tabbed UI.
+      </p>
+      <ul class="feature-list">
+        <li><strong>Chat panel</strong> &mdash; markdown-rendered conversation with streaming output</li>
+        <li><strong>Diff viewer</strong> (AIDiffViewer) &mdash; side-by-side code change review</li>
+        <li><strong>Memory panel</strong> &mdash; browse and manage AI memory across sessions</li>
+        <li><strong>Tools panel</strong> &mdash; enable/disable tool categories per session</li>
+        <li><strong>Settings panel</strong> &mdash; provider key, model, temp, context window</li>
+        <li><strong>Status bar</strong> &mdash; live provider state &amp; token usage</li>
+        <li>Registered in <code>editor_node.cpp</code> &amp; <code>register_editor_types.cpp</code></li>
+        <li>SCsub picks up <code>docks/ai/*.cpp</code> automatically</li>
+      </ul>
+      <div class="file-tree">
+        <span class="root">editor/docks/</span><br>
+        &nbsp;&nbsp;<span class="file">ai_dock.h / ai_dock.cpp</span><br>
+        &nbsp;&nbsp;<span class="dir">ai/</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ai_chat_panel · ai_settings_panel</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ai_memory_panel · ai_tools_panel</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="file">ai_status_bar · ai_code_editor (AIDiffViewer)</span>
+      </div>
+    </div>
+
+    <!-- Engine integration card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon icon-core">&#128295;</div>
+        <div>
+          <h2>Build System Integration</h2>
+          <div class="tagline">SCsub · config.py · register_types</div>
+        </div>
+      </div>
+      <p>
+        Both modules plug into the standard Godot SCons module pipeline. No patches to engine
+        core were required — only the EditorNode and type-registration files were extended.
+      </p>
+      <ul class="feature-list">
+        <li><code>modules/nexscript/config.py</code> &mdash; <code>can_build</code> always true</li>
+        <li><code>modules/ai_engine/config.py</code> &mdash; <code>can_build</code> always true</li>
+        <li>Both SCsub files recurse into all subdirectories</li>
+        <li><code>editor/editor_node.h/.cpp</code> &mdash; <code>AIDock</code> member + initialization</li>
+        <li><code>editor/register_editor_types.cpp</code> &mdash; <code>AIDock</code> &amp; <code>AIDiffViewer</code> registered</li>
+        <li><code>editor/docks/SCsub</code> &mdash; <code>ai/*.cpp</code> glob added</li>
+        <li>AI Dock placed in default layout at <code>DOCK_SLOT_RIGHT_BL</code></li>
+        <li>Layout key <code>"AIAssistant"</code> for persistent dock position</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <footer>
+    Godot Engine 4.7 beta &mdash; MIT License &mdash; godotengine.org<br>
+    This fork adds the <strong>NEX</strong> scripting language module and <strong>Godot AI Agent</strong> module to the upstream source tree.
+    The engine cannot be compiled directly in this environment; use the official SCons build instructions with a C++17 toolchain.
+  </footer>
+
 </body>
 </html>

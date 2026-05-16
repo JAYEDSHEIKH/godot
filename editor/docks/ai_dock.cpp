@@ -6,7 +6,12 @@
 #include "ai/ai_status_bar.h"
 #include "scene/gui/separator.h"
 
-AIDock::AIDock() {}
+AIDock::AIDock() {
+    set_title("AI Copilot");
+    set_layout_key("AIAssistant");
+    set_default_slot(DOCK_SLOT_RIGHT_BL);
+}
+
 AIDock::~AIDock() {}
 
 void AIDock::_bind_methods() {
@@ -20,7 +25,9 @@ void AIDock::_ready() {
 }
 
 void AIDock::_notification(int p_what) {
-    if (p_what == NOTIFICATION_THEME_CHANGED) _apply_theme();
+    if (p_what == NOTIFICATION_THEME_CHANGED) {
+        _apply_theme();
+    }
 }
 
 void AIDock::initialize() {
@@ -28,11 +35,13 @@ void AIDock::initialize() {
 }
 
 void AIDock::_setup_ui() {
-    set_name("AI Copilot");
+    vbox = memnew(VBoxContainer);
+    vbox->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
+    add_child(vbox);
 
     // Toolbar
     toolbar_hbox = memnew(HBoxContainer);
-    add_child(toolbar_hbox);
+    vbox->add_child(toolbar_hbox);
 
     new_session_btn = memnew(Button);
     new_session_btn->set_text("New");
@@ -53,22 +62,22 @@ void AIDock::_setup_ui() {
     toolbar_hbox->add_child(clear_history_btn);
 
     settings_button = memnew(Button);
-    settings_button->set_text("⚙");
+    settings_button->set_text(U"\u2699");
     toolbar_hbox->add_child(settings_button);
 
     // Provider label
     provider_label = memnew(Label);
     provider_label->set_text("No Provider");
     provider_label->add_theme_font_size_override("font_size", 10);
-    add_child(provider_label);
+    vbox->add_child(provider_label);
 
     HSeparator *sep = memnew(HSeparator);
-    add_child(sep);
+    vbox->add_child(sep);
 
     // Main tabs
     main_tabs = memnew(TabContainer);
     main_tabs->set_v_size_flags(SIZE_EXPAND_FILL);
-    add_child(main_tabs);
+    vbox->add_child(main_tabs);
 
     chat_panel = memnew(AIChatPanel);
     chat_panel->set_name("Chat");
@@ -88,32 +97,46 @@ void AIDock::_setup_ui() {
 
     // Status bar at bottom
     HSeparator *sep2 = memnew(HSeparator);
-    add_child(sep2);
+    vbox->add_child(sep2);
 
     status_bar = memnew(AIStatusBar);
-    add_child(status_bar);
+    vbox->add_child(status_bar);
 }
 
 void AIDock::_setup_providers() {}
 
 void AIDock::_connect_signals() {
-    if (new_session_btn) new_session_btn->connect("pressed", callable_mp(this, &AIDock::_on_new_session));
-    if (save_session_btn) save_session_btn->connect("pressed", callable_mp(this, &AIDock::_on_save_session));
-    if (clear_history_btn) clear_history_btn->connect("pressed", callable_mp(this, &AIDock::_on_clear_history));
-    if (main_tabs) main_tabs->connect("tab_changed", callable_mp(this, &AIDock::_on_tab_changed));
+    if (new_session_btn) {
+        new_session_btn->connect("pressed", callable_mp(this, &AIDock::_on_new_session));
+    }
+    if (save_session_btn) {
+        save_session_btn->connect("pressed", callable_mp(this, &AIDock::_on_save_session));
+    }
+    if (clear_history_btn) {
+        clear_history_btn->connect("pressed", callable_mp(this, &AIDock::_on_clear_history));
+    }
+    if (main_tabs) {
+        main_tabs->connect("tab_changed", callable_mp(this, &AIDock::_on_tab_changed));
+    }
 }
 
 void AIDock::_apply_theme() {}
 
 void AIDock::_on_new_session() {
-    if (chat_panel) chat_panel->clear_conversation();
-    if (status_bar) status_bar->set_status(AIStatusBar::STATUS_IDLE, "New session");
+    if (chat_panel) {
+        chat_panel->clear_conversation();
+    }
+    if (status_bar) {
+        status_bar->set_status(AIStatusBar::STATUS_IDLE, "New session");
+    }
 }
 
 void AIDock::_on_save_session() {}
 
 void AIDock::_on_clear_history() {
-    if (chat_panel) chat_panel->clear_conversation();
+    if (chat_panel) {
+        chat_panel->clear_conversation();
+    }
 }
 
 void AIDock::_on_tab_changed(int p_index) {}

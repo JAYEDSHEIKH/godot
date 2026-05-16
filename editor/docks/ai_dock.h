@@ -1,14 +1,10 @@
 #pragma once
+#include "editor/docks/editor_dock.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/tab_container.h"
 #include "scene/gui/button.h"
 #include "scene/gui/option_button.h"
 #include "scene/gui/label.h"
-
-class AIProvider;
-class ToolExecutor;
-class ContextManager;
-class VectorDB;
 
 class AIChatPanel;
 class AISettingsPanel;
@@ -16,8 +12,8 @@ class AIMemoryPanel;
 class AIToolsPanel;
 class AIStatusBar;
 
-class AIDock : public VBoxContainer {
-    GDCLASS(AIDock, VBoxContainer);
+class AIDock : public EditorDock {
+    GDCLASS(AIDock, EditorDock);
 
 public:
     AIDock();
@@ -31,20 +27,21 @@ protected:
     static void _bind_methods();
 
 private:
-    TabContainer     *main_tabs           = nullptr;
-    AIChatPanel      *chat_panel          = nullptr;
-    AISettingsPanel  *settings_panel      = nullptr;
-    AIMemoryPanel    *memory_panel        = nullptr;
-    AIToolsPanel     *tools_panel         = nullptr;
-    AIStatusBar      *status_bar          = nullptr;
+    VBoxContainer    *vbox                  = nullptr;
+    TabContainer     *main_tabs             = nullptr;
+    AIChatPanel      *chat_panel            = nullptr;
+    AISettingsPanel  *settings_panel        = nullptr;
+    AIMemoryPanel    *memory_panel          = nullptr;
+    AIToolsPanel     *tools_panel           = nullptr;
+    AIStatusBar      *status_bar            = nullptr;
 
-    HBoxContainer    *toolbar_hbox        = nullptr;
-    Button           *new_session_btn     = nullptr;
-    Button           *save_session_btn    = nullptr;
-    OptionButton     *sessions_dropdown   = nullptr;
-    Button           *clear_history_btn   = nullptr;
-    Button           *settings_button     = nullptr;
-    Label            *provider_label      = nullptr;
+    HBoxContainer    *toolbar_hbox          = nullptr;
+    Button           *new_session_btn       = nullptr;
+    Button           *save_session_btn      = nullptr;
+    OptionButton     *sessions_dropdown     = nullptr;
+    Button           *clear_history_btn     = nullptr;
+    Button           *settings_button       = nullptr;
+    Label            *provider_label        = nullptr;
 
     void _setup_ui();
     void _setup_providers();
