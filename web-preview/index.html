@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Godot Engine 4.7 — Source Code</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 16px;
+      max-width: 700px;
+      width: 100%;
+      padding: 3rem;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .badge {
+      display: inline-block;
+      background: #e14d2a;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+    .version {
+      font-size: 1rem;
+      color: #a0a0c0;
+      margin-bottom: 1.5rem;
+    }
+    p {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #b0b0c8;
+      margin-bottom: 1.5rem;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 2rem 0;
+      text-align: left;
+    }
+    .info-item {
+      background: #0f3460;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+    }
+    .info-item .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7080a0;
+      margin-bottom: 4px;
+    }
+    .info-item .value {
+      font-size: 0.95rem;
+      color: #e0e0f0;
+      font-weight: 600;
+    }
+    .links {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    a.btn {
+      display: inline-block;
+      padding: 0.65rem 1.4rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    a.btn:hover { opacity: 0.85; }
+    a.btn-primary { background: #478cbf; color: white; }
+    a.btn-secondary { background: #0f3460; color: #a0c0e0; border: 1px solid #1a5080; }
+    .note {
+      margin-top: 2rem;
+      padding: 1rem 1.25rem;
+      background: #0a1628;
+      border-left: 3px solid #478cbf;
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+      font-size: 0.88rem;
+      color: #8090b0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">Source Repository</span>
+    <h1>Godot Engine</h1>
+    <div class="version">Version 4.7 &mdash; beta</div>
+    <p>
+      A feature-packed, cross-platform 2D and 3D game engine. Free and open source under the MIT license.
+    </p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Primary Language</div>
+        <div class="value">C++ (C++17)</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Build System</div>
+        <div class="value">SCons + Python</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Scripting</div>
+        <div class="value">GDScript, C#, C++</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Graphics</div>
+        <div class="value">Vulkan, OpenGL, D3D12</div>
+      </div>
+    </div>
+
+    <div class="links">
+      <a class="btn btn-primary" href="https://godotengine.org/download" target="_blank">Download Binaries</a>
+      <a class="btn btn-secondary" href="https://docs.godotengine.org/en/latest/engine_details/development/compiling" target="_blank">Build from Source</a>
+      <a class="btn btn-secondary" href="https://github.com/godotengine/godot" target="_blank">GitHub</a>
+    </div>
+
+    <div class="note">
+      This Replit project contains the Godot Engine source code. Because it is a large C++ engine requiring SCons and a full compiler toolchain, it cannot be compiled or run directly here. Use the links above to download pre-built binaries or follow the official compilation guide.
+    </div>
+  </div>
+</body>
+</html>
