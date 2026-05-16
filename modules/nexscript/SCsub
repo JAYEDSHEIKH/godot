@@ -1,0 +1,11 @@
+Import("env")
+Import("env_modules")
+
+env_nex = env_modules.Clone()
+
+env_nex.add_source_files(env.modules_sources, "*.cpp")
+env_nex.add_source_files(env.modules_sources, "frontend/*.cpp")
+env_nex.add_source_files(env.modules_sources, "optimizer/*.cpp")
+env_nex.add_source_files(env.modules_sources, "ir/*.cpp")
+env_nex.add_source_files(env.modules_sources, "vm/*.cpp")
+env_nex.add_source_files(env.modules_sources, "godot/*.cpp")

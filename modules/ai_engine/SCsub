@@ -1,0 +1,14 @@
+Import("env")
+Import("env_modules")
+
+env_ai = env_modules.Clone()
+
+env_ai.add_source_files(env.modules_sources, "*.cpp")
+env_ai.add_source_files(env.modules_sources, "core/*.cpp")
+env_ai.add_source_files(env.modules_sources, "provider/*.cpp")
+env_ai.add_source_files(env.modules_sources, "executor/*.cpp")
+env_ai.add_source_files(env.modules_sources, "executor/tools/*.cpp")
+env_ai.add_source_files(env.modules_sources, "context/*.cpp")
+env_ai.add_source_files(env.modules_sources, "vector_db/*.cpp")
+env_ai.add_source_files(env.modules_sources, "memory/*.cpp")
+env_ai.add_source_files(env.modules_sources, "utils/*.cpp")
