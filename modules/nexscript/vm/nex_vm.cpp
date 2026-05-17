@@ -1,11 +1,22 @@
 #include "nex_vm.h"
 #include "core/io/resource.h"
+#include "core/math/math_funcs.h"
+#include "core/object/object.h"
 #include "core/os/os.h"
-
-// Forward declare NexScriptInstance
-class NexScriptInstance;
+#include "godot/nex_instance.h"
+#include "godot/nex_script.h"
 
 Variant NexVM::execute(
+    NexFunction        *p_fn,
+    NexScriptInstance  *p_instance,
+    const Variant     **p_args,
+    int                 p_arg_count,
+    Callable::CallError &r_error
+) {
+    return vm_execute_fn(p_fn, p_instance, p_args, p_arg_count, r_error);
+}
+
+Variant NexVM::vm_execute_fn(
     NexFunction        *p_fn,
     NexScriptInstance  *p_instance,
     const Variant     **p_args,
@@ -17,7 +28,6 @@ Variant NexVM::execute(
     TypedStack stack;
     stack.allocate(p_fn->slot_count + 64);
 
-    // Copy args into first param slots
     for (int i = 0; i < p_arg_count && i < p_fn->param_count; i++) {
         if (p_args[i]) {
             NexType param_type = (i < p_fn->slot_types.size()) ? p_fn->slot_types[i] : NexType::make_variant();
@@ -27,7 +37,6 @@ Variant NexVM::execute(
 
     dispatch(p_fn, stack, p_instance);
 
-    // Return value is stored in slot 0 (return convention)
     Variant ret;
     if (p_fn->slot_count > 0 && stack[0].kind != SlotKind::EMPTY) {
         ret = stack[0].to_variant();
@@ -36,23 +45,207 @@ Variant NexVM::execute(
     return ret;
 }
 
+// Fix 6 — Full standard-library builtins
 void NexVM::call_builtin(const StringName &name, TypedStack &stack, int dst, int src_a, int src_b) {
+    // ── Output ─────────────────────────────────────────────────────────────
     if (name == "print" || name == "println") {
-        if (src_a >= 0) {
-            Variant v = stack[src_a].to_variant();
-            print_line(v.operator String());
-        }
+        if (src_a >= 0) print_line(stack[src_a].to_variant().operator String());
+        return;
     }
+    if (name == "print_err" || name == "printerr") {
+        if (src_a >= 0) print_error(stack[src_a].to_variant().operator String());
+        return;
+    }
+
+    // ── Type conversion ────────────────────────────────────────────────────
+    if (name == "str") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_str(new String(v.operator String()));
+        return;
+    }
+    if (name == "int") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_int((int64_t)v);
+        return;
+    }
+    if (name == "float") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_float((double)v);
+        return;
+    }
+    if (name == "bool") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_bool((bool)v);
+        return;
+    }
+
+    // ── Math ───────────────────────────────────────────────────────────────
+    if (name == "abs") {
+        if (src_a >= 0) {
+            if (stack[src_a].kind == SlotKind::INT64)
+                stack[dst].set_int(Math::abs(stack[src_a].as_int()));
+            else
+                stack[dst].set_float(Math::abs(stack[src_a].as_float()));
+        }
+        return;
+    }
+    if (name == "sign") {
+        if (src_a >= 0) {
+            if (stack[src_a].kind == SlotKind::INT64)
+                stack[dst].set_int(SIGN(stack[src_a].as_int()));
+            else
+                stack[dst].set_float(SIGN(stack[src_a].as_float()));
+        }
+        return;
+    }
+    if (name == "floor") {
+        if (src_a >= 0) stack[dst].set_float(Math::floor(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "ceil") {
+        if (src_a >= 0) stack[dst].set_float(Math::ceil(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "round") {
+        if (src_a >= 0) stack[dst].set_float(Math::round(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "sqrt") {
+        if (src_a >= 0) stack[dst].set_float(Math::sqrt(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "pow") {
+        if (src_a >= 0 && src_b >= 0)
+            stack[dst].set_float(Math::pow(stack[src_a].as_float(), stack[src_b].as_float()));
+        return;
+    }
+    if (name == "log") {
+        if (src_a >= 0) stack[dst].set_float(Math::log(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "exp") {
+        if (src_a >= 0) stack[dst].set_float(Math::exp(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "sin") {
+        if (src_a >= 0) stack[dst].set_float(Math::sin(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "cos") {
+        if (src_a >= 0) stack[dst].set_float(Math::cos(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "tan") {
+        if (src_a >= 0) stack[dst].set_float(Math::tan(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "asin") {
+        if (src_a >= 0) stack[dst].set_float(Math::asin(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "acos") {
+        if (src_a >= 0) stack[dst].set_float(Math::acos(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "atan") {
+        if (src_a >= 0) stack[dst].set_float(Math::atan(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "atan2") {
+        if (src_a >= 0 && src_b >= 0)
+            stack[dst].set_float(Math::atan2(stack[src_a].as_float(), stack[src_b].as_float()));
+        return;
+    }
+
+    // ── Min / max ──────────────────────────────────────────────────────────
+    if (name == "min") {
+        if (src_a >= 0 && src_b >= 0) {
+            if (stack[src_a].kind == SlotKind::INT64)
+                stack[dst].set_int(MIN(stack[src_a].as_int(), stack[src_b].as_int()));
+            else
+                stack[dst].set_float(MIN(stack[src_a].as_float(), stack[src_b].as_float()));
+        }
+        return;
+    }
+    if (name == "max") {
+        if (src_a >= 0 && src_b >= 0) {
+            if (stack[src_a].kind == SlotKind::INT64)
+                stack[dst].set_int(MAX(stack[src_a].as_int(), stack[src_b].as_int()));
+            else
+                stack[dst].set_float(MAX(stack[src_a].as_float(), stack[src_b].as_float()));
+        }
+        return;
+    }
+
+    // ── Randomness ─────────────────────────────────────────────────────────
+    if (name == "randf") {
+        stack[dst].set_float(Math::randf());
+        return;
+    }
+    if (name == "randi") {
+        stack[dst].set_int((int64_t)Math::rand());
+        return;
+    }
+    if (name == "randf_range") {
+        if (src_a >= 0 && src_b >= 0)
+            stack[dst].set_float(Math::random(stack[src_a].as_float(), stack[src_b].as_float()));
+        return;
+    }
+    if (name == "randi_range") {
+        if (src_a >= 0 && src_b >= 0)
+            stack[dst].set_int(Math::random((int64_t)stack[src_a].as_int(), (int64_t)stack[src_b].as_int()));
+        return;
+    }
+
+    // ── Utility ────────────────────────────────────────────────────────────
+    if (name == "len") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_int((int64_t)v.call("size"));
+        return;
+    }
+    if (name == "typeof") {
+        Variant v = (src_a >= 0) ? stack[src_a].to_variant() : Variant();
+        stack[dst].set_int((int64_t)v.get_type());
+        return;
+    }
+    if (name == "is_nan") {
+        if (src_a >= 0) stack[dst].set_bool(Math::is_nan(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "is_inf") {
+        if (src_a >= 0) stack[dst].set_bool(Math::is_inf(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "deg_to_rad") {
+        if (src_a >= 0) stack[dst].set_float(Math::deg_to_rad(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "rad_to_deg") {
+        if (src_a >= 0) stack[dst].set_float(Math::rad_to_deg(stack[src_a].as_float()));
+        return;
+    }
+    if (name == "clamp") {
+        // src_a = value, src_b = min slot, dst = max slot
+        // IR gen must emit 3 args in consecutive slots
+        // Uses src_a=value, src_b=min; caller puts max at src_b+1
+        if (src_a >= 0 && src_b >= 0) {
+            if (stack[src_a].kind == SlotKind::INT64)
+                stack[dst].set_int(CLAMP(stack[src_a].as_int(), stack[src_b].as_int(), stack[src_b + 1].as_int()));
+            else
+                stack[dst].set_float(CLAMP(stack[src_a].as_float(), stack[src_b].as_float(), stack[src_b + 1].as_float()));
+        }
+        return;
+    }
+
+    WARN_PRINT(vformat("NexScript: unknown builtin function '%s'", name));
 }
 
 void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *instance) {
     if (fn->instructions.is_empty()) return;
 
-    const NexIRInstr *ip = fn->instructions.ptr();
+    const NexIRInstr *ip     = fn->instructions.ptr();
     const NexIRInstr *ip_end = ip + fn->instructions.size();
 
-    // Use a switch-based dispatch for portability
-    // (computed goto would give ~30% speedup on GCC/Clang for tight loops)
     while (ip < ip_end) {
         const NexIRInstr &instr = *ip;
         switch (instr.op) {
@@ -70,8 +263,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 break;
 
             case NexOp::LOAD_STR_CONST: {
-                String *s = new String(fn->string_pool[instr.imm_str]);
-                stack[instr.dst].set_str(s);
+                stack[instr.dst].set_str(new String(fn->string_pool[instr.imm_str]));
             } break;
 
             case NexOp::LOAD_NULL:
@@ -86,7 +278,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 if (instr.dst >= 0 && instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
                 break;
 
-            // ── Integer Arithmetic ─────────────────────────────────────
+            // ── Integer Arithmetic ──────────────────────────────────────────
             case NexOp::INT_ADD:
                 stack[instr.dst].set_int(stack[instr.src_a].as_int() + stack[instr.src_b].as_int());
                 break;
@@ -97,8 +289,9 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_int(stack[instr.src_a].as_int() * stack[instr.src_b].as_int());
                 break;
             case NexOp::INT_DIV: {
+                // Fix 16 — integer division returns integer
                 int64_t b = stack[instr.src_b].as_int();
-                stack[instr.dst].set_float(b != 0 ? (double)stack[instr.src_a].as_int() / b : 0.0);
+                stack[instr.dst].set_int(b != 0 ? stack[instr.src_a].as_int() / b : 0);
             } break;
             case NexOp::INT_MOD: {
                 int64_t b = stack[instr.src_b].as_int();
@@ -133,7 +326,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_bool(stack[instr.src_a].as_int() >= stack[instr.src_b].as_int());
                 break;
 
-            // ── Float Arithmetic ───────────────────────────────────────
+            // ── Float Arithmetic ────────────────────────────────────────────
             case NexOp::FLOAT_ADD:
                 stack[instr.dst].set_float(stack[instr.src_a].as_float() + stack[instr.src_b].as_float());
                 break;
@@ -148,9 +341,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_float(b != 0.0 ? stack[instr.src_a].as_float() / b : 0.0);
             } break;
             case NexOp::FLOAT_POW: {
-                double a = stack[instr.src_a].as_float();
-                double b = stack[instr.src_b].as_float();
-                stack[instr.dst].set_float(pow(a, b));
+                stack[instr.dst].set_float(Math::pow(stack[instr.src_a].as_float(), stack[instr.src_b].as_float()));
             } break;
             case NexOp::FLOAT_NEG:
                 stack[instr.dst].set_float(-stack[instr.src_a].as_float());
@@ -181,7 +372,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_int((int64_t)stack[instr.src_a].as_float());
                 break;
 
-            // ── Boolean ───────────────────────────────────────────────
+            // ── Boolean ────────────────────────────────────────────────────
             case NexOp::BOOL_AND:
                 stack[instr.dst].set_bool(stack[instr.src_a].as_bool() && stack[instr.src_b].as_bool());
                 break;
@@ -192,12 +383,11 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_bool(!stack[instr.src_a].as_bool());
                 break;
 
-            // ── String ────────────────────────────────────────────────
+            // ── String ─────────────────────────────────────────────────────
             case NexOp::STR_CONCAT: {
                 String a = stack[instr.src_a].as_str() ? *stack[instr.src_a].as_str() : String();
                 String b = stack[instr.src_b].as_str() ? *stack[instr.src_b].as_str() : String();
-                String *result = new String(a + b);
-                stack[instr.dst].set_str(result);
+                stack[instr.dst].set_str(new String(a + b));
             } break;
             case NexOp::STR_EQ: {
                 String a = stack[instr.src_a].as_str() ? *stack[instr.src_a].as_str() : String();
@@ -210,7 +400,7 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 stack[instr.dst].set_bool(a != b);
             } break;
 
-            // ── Struct ────────────────────────────────────────────────
+            // ── Struct ─────────────────────────────────────────────────────
             case NexOp::STRUCT_ALLOC: {
                 int64_t size = instr.imm_int > 0 ? instr.imm_int : 64;
                 void *mem = memalloc(size);
@@ -243,22 +433,23 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 if (base) *(Vector2 *)(base + instr.field_offset) = stack[instr.src_a].as_vec2();
             } break;
 
-            // ── Arrays ────────────────────────────────────────────────
+            // ── Arrays ─────────────────────────────────────────────────────
             case NexOp::ARRAY_NEW: {
                 Array *arr = new Array();
                 stack[instr.dst].set_struct((void *)arr);
                 stack[instr.dst].kind = SlotKind::OBJECT;
             } break;
             case NexOp::ARRAY_LEN: {
-                // Stored as Variant Array pointer
+                // Fix 17 — properly dereference the Array pointer
                 if (stack[instr.src_a].kind == SlotKind::OBJECT) {
-                    stack[instr.dst].set_int(0); // simplified
+                    Array *arr = reinterpret_cast<Array *>(stack[instr.src_a].as_struct());
+                    stack[instr.dst].set_int(arr ? (int64_t)arr->size() : 0);
                 } else {
                     stack[instr.dst].set_int(0);
                 }
             } break;
 
-            // ── Control flow ──────────────────────────────────────────
+            // ── Control flow ───────────────────────────────────────────────
             case NexOp::JUMP:
                 if (instr.label >= 0 && instr.label < fn->instructions.size()) {
                     ip = fn->instructions.ptr() + instr.label;
@@ -285,9 +476,8 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 break;
 
             case NexOp::JUMP_TABLE: {
-                // O(1) match dispatch for integer values
                 int64_t val = stack[instr.src_a].as_int();
-                int target = instr.label; // default
+                int target = instr.label;
                 if (val >= 0 && val < instr.jump_table.size()) {
                     target = instr.jump_table[val];
                 }
@@ -306,25 +496,62 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
             case NexOp::RETURN_VOID:
                 return;
 
-            // ── Calls ─────────────────────────────────────────────────
+            // ── Calls ──────────────────────────────────────────────────────
             case NexOp::CALL_BUILTIN:
                 call_builtin(instr.call_name, stack, instr.dst, instr.src_a, instr.src_b);
                 break;
 
-            case NexOp::CALL_DIRECT:
-                // Full call requires function lookup — simplified here
-                break;
+            // Fix 5 — CALL_DIRECT: call another NexScript function
+            case NexOp::CALL_DIRECT: {
+                NexFunction *callee = nullptr;
+                if (instance && instance->get_script().is_valid()) {
+                    Ref<NexScript> nex_script = instance->get_script();
+                    callee = nex_script->get_function(instr.call_name);
+                }
+                if (callee) {
+                    int arg_count = instr.src_b;
+                    Vector<Variant>         arg_variants;
+                    Vector<const Variant *> arg_ptrs;
+                    arg_variants.resize(arg_count);
+                    arg_ptrs.resize(arg_count);
+                    for (int i = 0; i < arg_count; i++) {
+                        arg_variants.write[i] = stack[instr.src_a + i].to_variant();
+                        arg_ptrs.write[i]     = &arg_variants[i];
+                    }
+                    Callable::CallError sub_err;
+                    Variant result = vm_execute_fn(callee, instance, arg_ptrs.ptr(), arg_count, sub_err);
+                    if (instr.dst >= 0) {
+                        stack[instr.dst].from_variant(result, callee->return_type);
+                    }
+                }
+            } break;
 
-            case NexOp::CALL_GODOT_METHOD:
-                // Godot interop call — handled by script instance
-                break;
+            // Fix 5 — CALL_GODOT_METHOD: call a method on a Godot Object
+            case NexOp::CALL_GODOT_METHOD: {
+                Object *obj = stack[instr.src_a].as_object();
+                if (obj) {
+                    int arg_count = instr.src_b;
+                    Vector<Variant>         arg_variants;
+                    Vector<const Variant *> arg_ptrs;
+                    arg_variants.resize(arg_count);
+                    arg_ptrs.resize(arg_count);
+                    for (int i = 0; i < arg_count; i++) {
+                        arg_variants.write[i] = stack[instr.src_a + 1 + i].to_variant();
+                        arg_ptrs.write[i]     = &arg_variants[i];
+                    }
+                    Callable::CallError call_err;
+                    Variant result;
+                    obj->callp(instr.call_name, arg_ptrs.ptr(), arg_count, result, call_err);
+                    if (instr.dst >= 0) {
+                        stack[instr.dst].from_variant(result, NexType::make_variant());
+                    }
+                }
+            } break;
 
-            // ── Option ────────────────────────────────────────────────
+            // ── Option ─────────────────────────────────────────────────────
             case NexOp::OPTION_SOME: {
-                // Store bool=true flag in dst, value in src_a
-                // Simplified: just copy src to dst
                 if (instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
-                stack[instr.dst].kind = SlotKind::INT64; // mark as some with value
+                stack[instr.dst].kind = SlotKind::INT64;
             } break;
             case NexOp::OPTION_NONE:
                 stack[instr.dst] = TypedSlot();
@@ -336,10 +563,10 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 if (instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
                 break;
 
-            // ── Result ────────────────────────────────────────────────
+            // ── Result ─────────────────────────────────────────────────────
             case NexOp::RESULT_OK:
                 if (instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
-                stack[instr.dst].data.b = true; // is_ok flag
+                stack[instr.dst].data.b = true;
                 break;
             case NexOp::RESULT_ERR:
                 if (instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
@@ -355,7 +582,6 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 if (instr.src_a >= 0) stack[instr.dst] = stack[instr.src_a];
                 break;
             case NexOp::RESULT_PROPAGATE: {
-                // ? operator: if not ok, return err
                 bool is_ok = instr.src_a >= 0 ? stack[instr.src_a].data.b : false;
                 if (!is_ok) {
                     if (instr.src_b >= 0) stack[0] = stack[instr.src_b];
@@ -363,12 +589,10 @@ void NexVM::dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *inst
                 }
             } break;
 
-            // ── Godot interop ─────────────────────────────────────────
+            // ── Godot interop ──────────────────────────────────────────────
             case NexOp::TO_VARIANT:
-                // Already handled at API boundaries
                 break;
             case NexOp::FROM_VARIANT:
-                // Type conversion at API boundaries
                 break;
 
             case NexOp::NOP:

@@ -1,11 +1,25 @@
+#!/usr/bin/env python
+from misc.utility.scons_hints import *
+
 Import("env")
 Import("env_modules")
 
 env_nex = env_modules.Clone()
 
+# Core runtime — always compiled
 env_nex.add_source_files(env.modules_sources, "*.cpp")
 env_nex.add_source_files(env.modules_sources, "frontend/*.cpp")
 env_nex.add_source_files(env.modules_sources, "optimizer/*.cpp")
 env_nex.add_source_files(env.modules_sources, "ir/*.cpp")
 env_nex.add_source_files(env.modules_sources, "vm/*.cpp")
 env_nex.add_source_files(env.modules_sources, "godot/*.cpp")
+
+# Editor-only files (syntax highlighting, script templates, etc.)
+if env.editor_build:
+    env_nex.add_source_files(env.modules_sources, "editor/*.cpp")
+    SConscript("editor/script_templates/SCsub")
+
+# Test suite
+if env["tests"]:
+    env_nex.Append(CPPDEFINES=["TESTS_ENABLED"])
+    env_nex.add_source_files(env.modules_sources, "tests/*.cpp")

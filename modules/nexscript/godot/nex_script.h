@@ -38,7 +38,11 @@ public:
     bool        can_instantiate() const override;
     StringName  get_instance_base_type() const override { return base_class; }
     ScriptInstance *instance_create(Object *p_this) override;
-    PlaceholderScriptInstance *placeholder_instance_create(Object *p_this) override { return nullptr; }
+
+    PlaceholderScriptInstance *placeholder_instance_create(Object *p_this) override {
+        PlaceholderScriptInstance *placeholder = memnew(PlaceholderScriptInstance(get_language(), Ref<Script>(this), p_this));
+        return placeholder;
+    }
 
     void get_script_property_list(List<PropertyInfo> *p_list) const override;
     void get_script_signal_list(List<MethodInfo> *p_list) const override;
@@ -63,6 +67,13 @@ public:
         source_code = p_code;
         is_compiled = false;
     }
+
+    void set_path(const String &p_path, bool p_take_over = false) override {
+        file_path = p_path;
+        Resource::set_path(p_path, p_take_over);
+    }
+
+    String get_file_path() const { return file_path; }
 
     void get_constants(HashMap<StringName, Variant> *p_constants) override {}
     void get_members(HashSet<StringName> *p_members) override {}

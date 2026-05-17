@@ -3,6 +3,7 @@
 #include "modules/nexscript/frontend/nex_tokenizer.h"
 #include "modules/nexscript/frontend/nex_parser.h"
 #include "modules/nexscript/frontend/nex_analyzer.h"
+#include "core/io/file_access.h"
 
 NexLanguage *NexLanguage::singleton = nullptr;
 
@@ -15,7 +16,6 @@ NexLanguage::~NexLanguage() {
 }
 
 void NexLanguage::init() {
-    // Register built-in NEX functions and Godot interop
 }
 
 void NexLanguage::finish() {
@@ -38,7 +38,7 @@ void NexLanguage::get_reserved_words(List<String> *p_words) const {
         "and", "or", "not",
         "some", "none", "ok", "err",
         "true", "false",
-        "extends", "signal", "emit",
+        "extends", "class_name", "signal", "emit",
         "autoload", "as", "is",
         "int", "int8", "int16", "int32", "int64",
         "float", "float32", "float64",
@@ -61,6 +61,50 @@ void NexLanguage::get_string_delimiters(List<String> *p_delimiters) const {
     p_delimiters->push_back("\" \"");
 }
 
+// Fix 9a — Global constants (needed for singletons / autoloads)
+void NexLanguage::add_global_constant(const StringName &p_variable, const Variant &p_value) {
+    global_constants[p_variable] = p_value;
+}
+
+void NexLanguage::add_named_global_constant(const StringName &p_name, const Variant &p_value) {
+    named_global_constants[p_name] = p_value;
+}
+
+void NexLanguage::remove_named_global_constant(const StringName &p_name) {
+    named_global_constants.erase(p_name);
+}
+
+const Variant *NexLanguage::get_global_constant(const StringName &p_name) const {
+    if (named_global_constants.has(p_name)) return &named_global_constants[p_name];
+    if (global_constants.has(p_name))       return &global_constants[p_name];
+    return nullptr;
+}
+
+// Fix 9b — get_global_class_name (needed for class_name declarations)
+void NexLanguage::get_global_class_name(const String &p_path, String *r_name, String *r_base_type) const {
+    Error err;
+    String source = FileAccess::get_file_as_string(p_path, &err);
+    if (err != OK) return;
+
+    NexTokenizer tk;
+    tk.set_source(source);
+    Vector<NexToken> tokens = tk.tokenize();
+
+    for (int i = 0; i + 1 < tokens.size(); i++) {
+        if (tokens[i].kind == NexTokenKind::IDENT && tokens[i].value == "class_name") {
+            if (r_name && i + 1 < tokens.size()) {
+                *r_name = tokens[i + 1].value;
+            }
+        }
+        if (tokens[i].kind == NexTokenKind::KW_EXTENDS && i + 1 < tokens.size()) {
+            if (r_base_type) {
+                *r_base_type = tokens[i + 1].value;
+            }
+        }
+    }
+}
+
+// Fix 10 — Corrected make_template with valid NEX syntax (no semicolons)
 Ref<Script> NexLanguage::make_template(
     const String &p_template,
     const String &p_class_name,
@@ -68,7 +112,19 @@ Ref<Script> NexLanguage::make_template(
 ) const {
     Ref<NexScript> script;
     script.instantiate();
-    String src = "extends " + p_base_class_name + ";\n\nfn _ready {\n\t\n}\n";
+
+    String base = p_base_class_name.is_empty() ? "Node" : p_base_class_name;
+    String src;
+    src += "extends " + base + "\n";
+    src += "\n";
+    src += "fn _ready {\n";
+    src += "\t\n";
+    src += "}\n";
+    src += "\n";
+    src += "fn _process(delta: float) {\n";
+    src += "\t\n";
+    src += "}\n";
+
     script->set_source_code(src);
     return script;
 }

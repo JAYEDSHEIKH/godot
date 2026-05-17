@@ -16,6 +16,14 @@ public:
         Callable::CallError &r_error
     );
 
+    Variant vm_execute_fn(
+        NexFunction        *p_fn,
+        NexScriptInstance  *p_instance,
+        const Variant     **p_args,
+        int                 p_arg_count,
+        Callable::CallError &r_error
+    );
+
 private:
     void dispatch(NexFunction *fn, TypedStack &stack, NexScriptInstance *instance);
     void call_builtin(const StringName &name, TypedStack &stack, int dst, int src_a, int src_b);

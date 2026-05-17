@@ -16,6 +16,7 @@ Ref<Resource> ResourceFormatLoaderNex::load(
     Ref<NexScript> script;
     script.instantiate();
     script->set_source_code(source);
+    script->set_path(p_path);
 
     Error compile_err = script->compile();
     if (r_error) *r_error = compile_err;

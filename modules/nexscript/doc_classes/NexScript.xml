@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="NexScript" inherits="Script" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
+    <brief_description>
+        A script written in the NEX scripting language.
+    </brief_description>
+    <description>
+        NexScript is a statically-typed scripting language for Godot with Rust-inspired syntax.
+        Files use the [code].nex[/code] extension.
+        NEX is immutable-by-default: bindings declared with [code]let[/code] cannot be reassigned.
+        Use [code]var[/code] for mutable bindings.
+    </description>
+    <tutorials>
+    </tutorials>
+</class>

@@ -31,12 +31,18 @@ Error NexScript::compile() {
     if (!ast) return ERR_PARSE_ERROR;
 
     if (!parser.get_errors().is_empty()) {
+        for (const String &err : parser.get_errors()) {
+            ERR_PRINT(vformat("NexScript: parse error in '%s': %s", file_path, err));
+        }
         delete ast;
         return ERR_PARSE_ERROR;
     }
 
     NexAnalyzer analyzer;
     if (!analyzer.analyze(ast)) {
+        for (const String &err : analyzer.get_errors()) {
+            ERR_PRINT(vformat("NexScript: compile error in '%s': %s", file_path, err));
+        }
         delete ast;
         return ERR_COMPILATION_FAILED;
     }

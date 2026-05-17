@@ -5,7 +5,6 @@
 
 NexScriptInstance::NexScriptInstance(Object *p_owner, const Ref<NexScript> &p_script)
     : owner(p_owner), script(p_script) {
-    // Initialize member slots with default values for exports
     for (const NexScript::ExportVar &ev : script->exports) {
         TypedSlot slot;
         slot.from_variant(ev.default_value, ev.type);
@@ -17,7 +16,6 @@ NexScriptInstance::~NexScriptInstance() {}
 
 bool NexScriptInstance::set(const StringName &p_name, const Variant &p_value) {
     if (member_slots.has(p_name)) {
-        // Determine type from exports
         for (const NexScript::ExportVar &ev : script->exports) {
             if (ev.name == p_name) {
                 member_slots[p_name].from_variant(p_value, ev.type);
@@ -27,7 +25,6 @@ bool NexScriptInstance::set(const StringName &p_name, const Variant &p_value) {
         member_slots[p_name].from_variant(p_value, NexType::make_variant());
         return true;
     }
-    // Create new slot
     TypedSlot slot;
     slot.from_variant(p_value, NexType::make_variant());
     member_slots[p_name] = slot;
@@ -75,21 +72,43 @@ void NexScriptInstance::notification(int p_notification, bool p_reversed) {
     Callable::CallError err;
 
     switch (p_notification) {
+
         case Node::NOTIFICATION_READY: {
             if (script->has_method(StringName("_ready"))) {
                 Variant ret;
                 call(StringName("_ready"), nullptr, 0, ret, err);
             }
         } break;
+
         case Node::NOTIFICATION_PROCESS: {
             if (script->has_method(StringName("_process"))) {
-                // dt passed separately in _process override
+                Node *node = Object::cast_to<Node>(owner);
+                double delta = node ? node->get_process_delta_time() : 0.0;
+                Variant v_delta = delta;
+                const Variant *args[1] = { &v_delta };
+                Variant ret;
+                call(StringName("_process"), args, 1, ret, err);
             }
         } break;
+
         case Node::NOTIFICATION_PHYSICS_PROCESS: {
             if (script->has_method(StringName("_physics_process"))) {
+                Node *node = Object::cast_to<Node>(owner);
+                double delta = node ? node->get_physics_process_delta_time() : 0.0;
+                Variant v_delta = delta;
+                const Variant *args[1] = { &v_delta };
+                Variant ret;
+                call(StringName("_physics_process"), args, 1, ret, err);
             }
         } break;
+
+        case Node::NOTIFICATION_ENTER_TREE: {
+            if (script->has_method(StringName("_enter_tree"))) {
+                Variant ret;
+                call(StringName("_enter_tree"), nullptr, 0, ret, err);
+            }
+        } break;
+
         case Node::NOTIFICATION_EXIT_TREE: {
             if (script->has_method(StringName("_exit_tree"))) {
                 Variant ret;

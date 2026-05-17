@@ -39,6 +39,44 @@ struct TypedSlot {
     SlotKind kind = SlotKind::EMPTY;
     SlotData data = {};
 
+    TypedSlot() = default;
+
+    ~TypedSlot() {
+        _free_str();
+    }
+
+    TypedSlot(const TypedSlot &other) : kind(other.kind), data(other.data) {
+        if (kind == SlotKind::STR && data.ptr) {
+            data.ptr = new String(*reinterpret_cast<const String *>(other.data.ptr));
+        }
+    }
+
+    TypedSlot &operator=(const TypedSlot &other) {
+        if (this == &other) return *this;
+        _free_str();
+        kind = other.kind;
+        data = other.data;
+        if (kind == SlotKind::STR && data.ptr) {
+            data.ptr = new String(*reinterpret_cast<const String *>(other.data.ptr));
+        }
+        return *this;
+    }
+
+    TypedSlot(TypedSlot &&other) noexcept : kind(other.kind), data(other.data) {
+        other.kind     = SlotKind::EMPTY;
+        other.data.ptr = nullptr;
+    }
+
+    TypedSlot &operator=(TypedSlot &&other) noexcept {
+        if (this == &other) return *this;
+        _free_str();
+        kind = other.kind;
+        data = other.data;
+        other.kind     = SlotKind::EMPTY;
+        other.data.ptr = nullptr;
+        return *this;
+    }
+
     inline int64_t  as_int()    const { return data.i64; }
     inline double   as_float()  const { return data.f64; }
     inline bool     as_bool()   const { return data.b; }
@@ -49,16 +87,21 @@ struct TypedSlot {
     inline Object  *as_object() const { return (Object *)data.ptr; }
     inline void    *as_struct() const { return data.ptr; }
 
-    inline void set_int(int64_t v)   { kind = SlotKind::INT64;   data.i64 = v; }
-    inline void set_float(double v)  { kind = SlotKind::FLOAT64; data.f64 = v; }
-    inline void set_bool(bool v)     { kind = SlotKind::BOOL;    data.b   = v; }
-    inline void set_vec2(Vector2 v)  { kind = SlotKind::VECTOR2; data.v2  = v; }
-    inline void set_vec3(Vector3 v)  { kind = SlotKind::VECTOR3; data.v3  = v; }
-    inline void set_color(Color v)   { kind = SlotKind::COLOR;   data.col = v; }
-    inline void set_char(uint32_t v) { kind = SlotKind::CHAR;    data.ch  = v; }
-    inline void set_str(String *s)   { kind = SlotKind::STR;     data.ptr = s; }
-    inline void set_object(Object *o){ kind = SlotKind::OBJECT;  data.ptr = o; }
-    inline void set_struct(void *p)  { kind = SlotKind::STRUCT_PTR; data.ptr = p; }
+    inline void set_int(int64_t v)    { kind = SlotKind::INT64;   data.i64 = v; }
+    inline void set_float(double v)   { kind = SlotKind::FLOAT64; data.f64 = v; }
+    inline void set_bool(bool v)      { kind = SlotKind::BOOL;    data.b   = v; }
+    inline void set_vec2(Vector2 v)   { kind = SlotKind::VECTOR2; data.v2  = v; }
+    inline void set_vec3(Vector3 v)   { kind = SlotKind::VECTOR3; data.v3  = v; }
+    inline void set_color(Color v)    { kind = SlotKind::COLOR;   data.col = v; }
+    inline void set_char(uint32_t v)  { kind = SlotKind::CHAR;    data.ch  = v; }
+    inline void set_object(Object *o) { kind = SlotKind::OBJECT;  data.ptr = o; }
+    inline void set_struct(void *p)   { kind = SlotKind::STRUCT_PTR; data.ptr = p; }
+
+    inline void set_str(String *s) {
+        _free_str();
+        kind = SlotKind::STR;
+        data.ptr = s;
+    }
 
     Variant to_variant() const {
         switch (kind) {
@@ -89,14 +132,21 @@ struct TypedSlot {
             case NexBaseType::FLOAT32:
             case NexBaseType::FLOAT64: set_float((double)v);            break;
             case NexBaseType::STR: {
-                String *s = new String((String)v);
-                set_str(s);
+                set_str(new String((String)v));
             } break;
             case NexBaseType::VECTOR2: set_vec2((Vector2)v);            break;
             case NexBaseType::VECTOR3: set_vec3((Vector3)v);            break;
             case NexBaseType::COLOR:   set_color((Color)v);             break;
             case NexBaseType::OBJECT:  set_object((Object *)v);         break;
             default: kind = SlotKind::VARIANT; break;
+        }
+    }
+
+private:
+    inline void _free_str() {
+        if (kind == SlotKind::STR && data.ptr) {
+            delete reinterpret_cast<String *>(data.ptr);
+            data.ptr = nullptr;
         }
     }
 };

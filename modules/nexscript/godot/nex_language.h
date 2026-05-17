@@ -1,8 +1,13 @@
 #pragma once
 #include "core/object/script_language.h"
+#include "core/templates/hash_map.h"
+#include "core/variant/variant.h"
 
 class NexLanguage : public ScriptLanguage {
     static NexLanguage *singleton;
+
+    HashMap<StringName, Variant> global_constants;
+    HashMap<StringName, Variant> named_global_constants;
 
 public:
     static NexLanguage *get_singleton() { return singleton; }
@@ -38,7 +43,7 @@ public:
     Script *create_script() const override;
 
     bool has_named_classes() const override { return false; }
-    bool supports_builtin_mode() const override { return false; }
+    bool supports_builtin_mode() const override { return true; }
     bool can_inherit_from_file() const override { return false; }
 
     int find_function(const String &p_function, const String &p_code) const override { return -1; }
@@ -47,9 +52,13 @@ public:
     Error complete_code(const String &p_code, const String &p_path, Object *p_owner, List<ScriptLanguage::CodeCompletionOption> *r_options, bool &r_forced, String &r_call_hint) override { return ERR_UNAVAILABLE; }
 
     void auto_indent_code(String &p_code, int p_from_line, int p_to_line) const override {}
-    void add_global_constant(const StringName &p_variable, const Variant &p_value) override {}
-    void add_named_global_constant(const StringName &p_name, const Variant &p_value) override {}
-    void remove_named_global_constant(const StringName &p_name) override {}
+
+    void add_global_constant(const StringName &p_variable, const Variant &p_value) override;
+    void add_named_global_constant(const StringName &p_name, const Variant &p_value) override;
+    void remove_named_global_constant(const StringName &p_name) override;
+
+    const Variant *get_global_constant(const StringName &p_name) const;
+
     void thread_enter() override {}
     void thread_exit() override {}
     String debug_get_error() const override { return ""; }
@@ -71,6 +80,7 @@ public:
     int profiling_get_accumulated_data(ScriptLanguage::ProfilingInfo *p_info_arr, int p_info_max) override { return 0; }
     int profiling_get_frame_data(ScriptLanguage::ProfilingInfo *p_info_arr, int p_info_max) override { return 0; }
     void frame() override {}
-    bool handles_global_class_type(const String &p_type) const override { return false; }
-    void get_global_class_name(const String &p_path, String *r_name, String *r_base_type) const override {}
+
+    bool handles_global_class_type(const String &p_type) const override { return p_type == "NexScript"; }
+    void get_global_class_name(const String &p_path, String *r_name, String *r_base_type) const override;
 };
