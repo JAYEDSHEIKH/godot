@@ -5,6 +5,9 @@
 #include "ai/ai_tools_panel.h"
 #include "ai/ai_status_bar.h"
 #include "scene/gui/separator.h"
+#include "core/io/json.h"
+#include "modules/ai_engine/core/ai_engine.h"
+#include "modules/ai_engine/provider/ai_provider.h"
 
 AIDock::AIDock() {
     set_title("AI Copilot");
@@ -16,12 +19,20 @@ AIDock::~AIDock() {}
 
 void AIDock::_bind_methods() {
     ClassDB::bind_method(D_METHOD("initialize"), &AIDock::initialize);
+    ClassDB::bind_method(D_METHOD("_on_response_chunk", "chunk"),
+        &AIDock::_on_response_chunk);
+    ClassDB::bind_method(D_METHOD("_on_tool_output", "call_id", "result"),
+        &AIDock::_on_tool_output);
+    ClassDB::bind_method(D_METHOD("_on_provider_error", "error"),
+        &AIDock::_on_provider_error);
 }
 
 void AIDock::_ready() {
     _setup_ui();
     _connect_signals();
     _apply_theme();
+    // Wire to AIEngine after we're in the scene tree
+    _setup_providers();
 }
 
 void AIDock::_notification(int p_what) {
@@ -103,7 +114,62 @@ void AIDock::_setup_ui() {
     vbox->add_child(status_bar);
 }
 
-void AIDock::_setup_providers() {}
+// Fix 8 — fully wire dock to AIEngine and inject HTTPRequest into provider
+void AIDock::_setup_providers() {
+    AIEngine *engine = AIEngine::get_singleton();
+    if (!engine) return;
+
+    // initialize() creates providers (still RefCounted) and wires their signals
+    engine->initialize();
+
+    // Inject the HTTPRequest node into the provider so HTTP calls work (Fix 5)
+    Ref<AIProvider> prov = engine->get_provider();
+    if (prov.is_valid()) {
+        if (!provider_http) {
+            provider_http = memnew(HTTPRequest);
+            add_child(provider_http);
+        }
+        prov->setup_http_request(provider_http);
+    }
+
+    // Wire AIEngine signals → dock UI handlers
+    if (!engine->is_connected("response_chunk_received",
+            callable_mp(this, &AIDock::_on_response_chunk))) {
+        engine->connect("response_chunk_received",
+            callable_mp(this, &AIDock::_on_response_chunk));
+    }
+    if (!engine->is_connected("tool_output_received",
+            callable_mp(this, &AIDock::_on_tool_output))) {
+        engine->connect("tool_output_received",
+            callable_mp(this, &AIDock::_on_tool_output));
+    }
+    if (!engine->is_connected("tool_confirmation_required",
+            callable_mp(this, &AIDock::_on_tool_confirmation_required))) {
+        engine->connect("tool_confirmation_required",
+            callable_mp(this, &AIDock::_on_tool_confirmation_required));
+    }
+
+    // Wire provider status → status bar
+    if (prov.is_valid()) {
+        if (!prov->is_connected("response_error",
+                callable_mp(this, &AIDock::_on_provider_error))) {
+            prov->connect("response_error",
+                callable_mp(this, &AIDock::_on_provider_error));
+        }
+    }
+
+    // Fix 9 — wire chat panel message → AIEngine::send_message
+    if (chat_panel && !chat_panel->is_connected("message_submitted",
+            callable_mp(engine, &AIEngine::send_message))) {
+        chat_panel->connect("message_submitted",
+            callable_mp(engine, &AIEngine::send_message));
+    }
+
+    // Update provider label
+    if (provider_label && prov.is_valid()) {
+        provider_label->set_text(prov->get_provider_name() + " / " + prov->get_model_name());
+    }
+}
 
 void AIDock::_connect_signals() {
     if (new_session_btn) {
@@ -122,21 +188,50 @@ void AIDock::_connect_signals() {
 
 void AIDock::_apply_theme() {}
 
-void AIDock::_on_new_session() {
+// Fix 8 — response chunk forwarded to chat panel streaming bubble
+void AIDock::_on_response_chunk(const String &p_chunk) {
+    if (chat_panel) chat_panel->append_streaming_chunk(p_chunk);
+}
+
+// Fix 8 — tool output shown in chat
+void AIDock::_on_tool_output(const String &p_call_id, const String &p_result) {
+    if (chat_panel) chat_panel->append_tool_call(p_call_id, p_result);
+}
+
+// Fix 8 — tool needs confirmation, notify user
+void AIDock::_on_tool_confirmation_required(const String &p_tool, const Dictionary &p_args) {
     if (chat_panel) {
-        chat_panel->clear_conversation();
+        String msg = "[color=#ffaa00][b]Tool Approval Required:[/b][/color]\n"
+            "AI wants to run: [b]" + p_tool + "[/b]\n\nArgs:\n" +
+            JSON::stringify(p_args, "  ") + "\n\n"
+            "[i]Use the Tools tab to Approve or Deny.[/i]";
+        chat_panel->append_system_message(msg);
     }
     if (status_bar) {
-        status_bar->set_status(AIStatusBar::STATUS_IDLE, "New session");
+        status_bar->set_status(AIStatusBar::STATUS_THINKING, "Waiting for approval: " + p_tool);
     }
+}
+
+// Fix 8 — provider error shown in chat and status bar
+void AIDock::_on_provider_error(const String &p_error) {
+    if (chat_panel) {
+        chat_panel->append_system_message("[color=red][b]Error:[/b] " + p_error + "[/color]");
+        chat_panel->set_streaming_in_progress(false);
+    }
+    if (status_bar) {
+        status_bar->set_status(AIStatusBar::STATUS_ERROR, p_error);
+    }
+}
+
+void AIDock::_on_new_session() {
+    if (chat_panel) chat_panel->clear_conversation();
+    if (status_bar)  status_bar->set_status(AIStatusBar::STATUS_IDLE, "New session");
 }
 
 void AIDock::_on_save_session() {}
 
 void AIDock::_on_clear_history() {
-    if (chat_panel) {
-        chat_panel->clear_conversation();
-    }
+    if (chat_panel) chat_panel->clear_conversation();
 }
 
 void AIDock::_on_tab_changed(int p_index) {}

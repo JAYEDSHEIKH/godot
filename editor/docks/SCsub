@@ -3,5 +3,7 @@ from misc.utility.scons_hints import *
 
 Import("env")
 
-env.add_source_files(env.editor_sources, "*.cpp")
-env.add_source_files(env.editor_sources, "ai/*.cpp")
+# Fix 11 — only compile dock sources in editor builds
+if env.editor_build:
+    env.add_source_files(env.editor_sources, "*.cpp")
+    env.add_source_files(env.editor_sources, "ai/*.cpp")

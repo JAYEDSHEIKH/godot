@@ -5,24 +5,28 @@
 AIChatPanel::AIChatPanel() {}
 
 void AIChatPanel::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("append_user_message",      "text"), &AIChatPanel::append_user_message);
-    ClassDB::bind_method(D_METHOD("append_assistant_message", "text"), &AIChatPanel::append_assistant_message);
-    ClassDB::bind_method(D_METHOD("clear_conversation"),               &AIChatPanel::clear_conversation);
-    ClassDB::bind_method(D_METHOD("set_streaming_in_progress", "v"),   &AIChatPanel::set_streaming_in_progress);
-    ClassDB::bind_method(D_METHOD("append_streaming_chunk",    "chunk"),&AIChatPanel::append_streaming_chunk);
-    ClassDB::bind_method(D_METHOD("get_input_text"),                   &AIChatPanel::get_input_text);
-    ClassDB::bind_method(D_METHOD("clear_input"),                      &AIChatPanel::clear_input);
+    ClassDB::bind_method(D_METHOD("append_user_message",       "text"),  &AIChatPanel::append_user_message);
+    ClassDB::bind_method(D_METHOD("append_assistant_message",  "text"),  &AIChatPanel::append_assistant_message);
+    ClassDB::bind_method(D_METHOD("append_tool_call", "name", "result"), &AIChatPanel::append_tool_call);
+    ClassDB::bind_method(D_METHOD("append_system_message",     "text"),  &AIChatPanel::append_system_message);
+    ClassDB::bind_method(D_METHOD("clear_conversation"),                  &AIChatPanel::clear_conversation);
+    ClassDB::bind_method(D_METHOD("set_streaming_in_progress", "v"),      &AIChatPanel::set_streaming_in_progress);
+    ClassDB::bind_method(D_METHOD("append_streaming_chunk",    "chunk"),  &AIChatPanel::append_streaming_chunk);
+    ClassDB::bind_method(D_METHOD("get_input_text"),                      &AIChatPanel::get_input_text);
+    ClassDB::bind_method(D_METHOD("clear_input"),                         &AIChatPanel::clear_input);
+
+    // Fix 9 Step A — declare the signal so emit_signal() works
+    ADD_SIGNAL(MethodInfo("message_submitted",
+        PropertyInfo(Variant::STRING, "text")));
 }
 
 void AIChatPanel::_ready() {
     set_custom_minimum_size(Vector2(0, 300));
 
-    // Main split: chat history / input area
     split = memnew(VSplitContainer);
     split->set_v_size_flags(SIZE_EXPAND_FILL);
     add_child(split);
 
-    // Chat history
     chat_bg = memnew(PanelContainer);
     chat_bg->set_v_size_flags(SIZE_EXPAND_FILL);
     chat_bg->set_custom_minimum_size(Vector2(0, 200));
@@ -37,18 +41,15 @@ void AIChatPanel::_ready() {
     chat_history->set_h_size_flags(SIZE_EXPAND_FILL);
     chat_bg->add_child(chat_history);
 
-    // Streaming indicator
     streaming_bar = memnew(ProgressBar);
     streaming_bar->set_indeterminate(true);
     streaming_bar->set_visible(false);
     add_child(streaming_bar);
 
-    // Input area
     input_area = memnew(VBoxContainer);
     input_area->set_custom_minimum_size(Vector2(0, 80));
     split->add_child(input_area);
 
-    // Options row
     options_hbox = memnew(HBoxContainer);
     input_area->add_child(options_hbox);
 
@@ -77,7 +78,6 @@ void AIChatPanel::_ready() {
     token_label->add_theme_font_size_override("font_size", 10);
     options_hbox->add_child(token_label);
 
-    // Input row
     input_hbox = memnew(HBoxContainer);
     input_hbox->set_v_size_flags(SIZE_EXPAND_FILL);
     input_area->add_child(input_hbox);
@@ -85,7 +85,8 @@ void AIChatPanel::_ready() {
     input_field = memnew(TextEdit);
     input_field->set_h_size_flags(SIZE_EXPAND_FILL);
     input_field->set_v_size_flags(SIZE_EXPAND_FILL);
-    input_field->set_placeholder_text("Ask your AI Copilot... (Shift+Enter to send, /plan /debug /brainstorm)");
+    input_field->set_placeholder_text(
+        "Ask your AI Copilot... (Shift+Enter to send, /plan /debug /brainstorm)");
     input_field->set_wrap_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
     input_hbox->add_child(input_field);
 
@@ -93,33 +94,32 @@ void AIChatPanel::_ready() {
     input_hbox->add_child(btn_vbox);
 
     send_btn = memnew(Button);
-    send_btn->set_text("▶");
+    send_btn->set_text(U"\u25B6");
     send_btn->set_tooltip_text("Send message (Shift+Enter)");
     send_btn->set_custom_minimum_size(Vector2(40, 0));
     send_btn->set_v_size_flags(SIZE_EXPAND_FILL);
     btn_vbox->add_child(send_btn);
 
     stop_btn = memnew(Button);
-    stop_btn->set_text("■");
+    stop_btn->set_text(U"\u25A0");
     stop_btn->set_tooltip_text("Stop generation");
     stop_btn->set_custom_minimum_size(Vector2(40, 0));
     stop_btn->set_visible(false);
     btn_vbox->add_child(stop_btn);
 
-    // Welcome message
-    append_system_message("Welcome to **Godot AI Copilot** — your built-in AI assistant.\n\n"
+    append_system_message(
+        "Welcome to [b]Godot AI Copilot[/b] — your built-in AI assistant.\n\n"
         "• Chat naturally about your project\n"
         "• Use /plan, /debug, /brainstorm, /review\n"
         "• I can read files, modify scripts, add nodes, and more\n"
-        "• Configure your API key in **Settings**\n");
+        "• Configure your API key in [b]Settings[/b]\n");
 
-    // Connect signals
-    send_btn->connect("pressed", callable_mp(this, &AIChatPanel::_on_send_pressed));
-    stop_btn->connect("pressed", callable_mp(this, &AIChatPanel::_on_stop_pressed));
-    input_field->connect("text_changed", callable_mp(this, &AIChatPanel::_on_input_text_changed));
+    send_btn->connect("pressed",        callable_mp(this, &AIChatPanel::_on_send_pressed));
+    stop_btn->connect("pressed",        callable_mp(this, &AIChatPanel::_on_stop_pressed));
+    input_field->connect("text_changed",callable_mp(this, &AIChatPanel::_on_input_text_changed));
 }
 
-void AIChatPanel::_on_send_pressed() { _submit_message(); }
+void AIChatPanel::_on_send_pressed()  { _submit_message(); }
 
 void AIChatPanel::_on_stop_pressed() {
     set_streaming_in_progress(false);
@@ -127,8 +127,8 @@ void AIChatPanel::_on_stop_pressed() {
 }
 
 void AIChatPanel::_on_input_text_changed() {
-    String text = input_field->get_text();
-    int tokens = text.length() / 4;
+    if (!token_label) return;
+    int tokens = input_field->get_text().length() / 4;
     token_label->set_text(vformat("~%d tokens", tokens));
 }
 
@@ -138,7 +138,7 @@ void AIChatPanel::_submit_message() {
     clear_input();
     append_user_message(text);
     set_streaming_in_progress(true);
-    // Dispatch to AI engine would happen here
+    // Fix 9 — signal is now declared, and dock wires it to AIEngine::send_message
     emit_signal("message_submitted", text);
 }
 
@@ -151,7 +151,7 @@ String AIChatPanel::_format_assistant_bubble(const String &text) {
 }
 
 String AIChatPanel::_format_tool_bubble(const String &name, const String &result) {
-    return "[color=#888888][i]🔧 Tool: " + name + "[/i]\n" + result + "[/color]\n\n";
+    return "[color=#888888][i]\xF0\x9F\x94\xA7 Tool: " + name + "[/i]\n" + result + "[/color]\n\n";
 }
 
 String AIChatPanel::_format_system_message(const String &text) {
@@ -162,8 +162,16 @@ void AIChatPanel::append_user_message(const String &p_text) {
     chat_history->append_text(_format_user_bubble(p_text));
 }
 
+// Fix 9 Step C — close any open streaming bubble first
 void AIChatPanel::append_assistant_message(const String &p_text) {
-    if (is_streaming) current_stream_text = "";
+    if (is_streaming) {
+        // The stream already rendered the text chunk-by-chunk — just close the bubble
+        chat_history->append_text("[/bgcolor]\n\n");
+        is_streaming = false;
+        current_stream_text = "";
+        set_streaming_in_progress(false);
+        return;
+    }
     chat_history->append_text(_format_assistant_bubble(p_text));
     set_streaming_in_progress(false);
 }
@@ -176,19 +184,28 @@ void AIChatPanel::append_system_message(const String &p_text) {
     chat_history->append_text(_format_system_message(p_text));
 }
 
+// Fix 9 Step C — open a streaming bubble on first chunk, append for subsequent ones
 void AIChatPanel::append_streaming_chunk(const String &p_chunk) {
+    if (!is_streaming) {
+        is_streaming = true;
+        current_stream_text = "";
+        chat_history->append_text(
+            "[bgcolor=#1a3a1a][color=#90ff90][b]AI Copilot:[/b][/color]\n");
+    }
     current_stream_text += p_chunk;
-    // Update last message in-place (simplified: just append)
     chat_history->append_text(p_chunk);
 }
 
 void AIChatPanel::clear_conversation() {
     chat_history->clear();
+    is_streaming = false;
+    current_stream_text = "";
     append_system_message("Conversation cleared.");
 }
 
 void AIChatPanel::set_streaming_in_progress(bool p_streaming) {
     is_streaming = p_streaming;
+    if (!p_streaming) current_stream_text = "";
     if (streaming_bar) streaming_bar->set_visible(p_streaming);
     if (send_btn) send_btn->set_visible(!p_streaming);
     if (stop_btn) stop_btn->set_visible(p_streaming);

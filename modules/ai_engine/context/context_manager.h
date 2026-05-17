@@ -2,14 +2,16 @@
 #include "core/object/ref_counted.h"
 #include "modules/ai_engine/core/ai_types.h"
 
+class Node;
+
 class ContextManager : public RefCounted {
     GDCLASS(ContextManager, RefCounted);
 
     Vector<ContextBlock> blocks;
-    int                  token_budget     = 6000;
-    int64_t              last_refresh_ms  = 0;
-    bool                 auto_refresh     = true;
-    String               godot_version    = "4.7-beta";
+    int                  token_budget    = 6000;
+    int64_t              last_refresh_ms = 0;
+    bool                 auto_refresh    = true;
+    String               godot_version   = "4.7-beta";
     String               project_name;
     String               project_path;
 
@@ -25,7 +27,8 @@ public:
     String build_context_string() const;
     int    estimate_tokens() const;
 
-    void add_block(const String &section, const String &content, ContextSectionPriority priority = PRIORITY_MEDIUM);
+    void add_block(const String &section, const String &content,
+        ContextSectionPriority priority = PRIORITY_MEDIUM);
     void remove_block(const String &section);
     void clear_blocks();
 
@@ -39,6 +42,8 @@ protected:
     static void _bind_methods();
 
 private:
-    void _trim_to_budget();
-    int  _estimate_tokens(const String &text) const;
+    void   _trim_to_budget();
+    int    _estimate_tokens(const String &text) const;
+    // Fix 10 — recursive scene tree dump helper
+    String _dump_node_tree(Node *p_node, int p_depth) const;
 };

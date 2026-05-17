@@ -188,15 +188,15 @@
     </div>
     <div class="status-item">
       <span class="dot dot-green"></span>
-      <span><strong>modules/ai_engine</strong> &mdash; fully implemented</span>
+      <span><strong>modules/ai_engine</strong> &mdash; 17-fix pass applied</span>
     </div>
     <div class="status-item">
       <span class="dot dot-green"></span>
-      <span><strong>editor/docks/ai</strong> &mdash; integrated into EditorNode</span>
+      <span><strong>editor/docks/ai</strong> &mdash; wired to AIEngine signals</span>
     </div>
     <div class="status-item">
-      <span class="dot dot-blue"></span>
-      <span><strong>Build system</strong> &mdash; SCsub + config.py registered</span>
+      <span class="dot dot-green"></span>
+      <span><strong>Build system</strong> &mdash; SCsub + config.py + doc classes</span>
     </div>
   </div>
 
@@ -251,14 +251,18 @@
         persistent memory layer across sessions.
       </p>
       <ul class="feature-list green">
-        <li>Providers: OpenAI (GPT-4o/o1) &amp; Google Gemini with streaming</li>
-        <li>Tool execution &mdash; scene editing, script gen, asset search, shell, git, debug</li>
-        <li>Vector DB with cosine/dot/Euclidean similarity for RAG</li>
-        <li>Embedding chunker + project indexer for full codebase search</li>
-        <li>Session &amp; long-term memory manager with configurable retention</li>
-        <li>Advanced prompting &mdash; chain-of-thought, few-shot, structured output</li>
-        <li>Scene &amp; code analyzers for deep project context</li>
-        <li>Metrics, rate limiter, LRU cache, structured logger</li>
+        <li>Providers: OpenAI (GPT-4o/o1) &amp; Gemini — HTTP actually fires via injected <code>HTTPRequest</code></li>
+        <li>Full conversation history sent each turn (multi-turn context)</li>
+        <li><code>AIEngine::initialize()</code> creates all subsystems &amp; wires all signals</li>
+        <li><code>send_message()</code> builds real context + memory + tool list before sending</li>
+        <li><code>handle_tool_call()</code> routes through <code>ToolExecutor</code> with confirmation flow</li>
+        <li>All signals declared: <code>initialized</code>, <code>response_chunk_received</code>, <code>tool_output_received</code>, <code>tool_confirmation_required</code>, <code>fact_added</code>, <code>tool_completed</code></li>
+        <li>Dock wires <code>message_submitted → send_message</code> and streams chunks to chat panel</li>
+        <li>Context manager reads real EditorInterface scene tree &amp; open scripts (<code>TOOLS_ENABLED</code>)</li>
+        <li>Keyword search scores multi-term matches with sorted results</li>
+        <li>Tools (<code>create_script</code>, <code>add_node</code>, etc.) use EditorInterface — no stubs</li>
+        <li>ConfigManager singleton is leak-free — owned &amp; freed by register_types</li>
+        <li>Build system: <code>editor_build</code>-gated SCsub, 8 doc classes registered</li>
       </ul>
       <div class="file-tree">
         <span class="root">modules/ai_engine/</span><br>

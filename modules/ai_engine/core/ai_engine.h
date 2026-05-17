@@ -18,12 +18,12 @@ public:
     void initialize();
     void shutdown();
 
-    Ref<AIProvider>     get_provider()         const { return provider; }
-    Ref<ToolExecutor>   get_executor()         const { return executor; }
-    Ref<ContextManager> get_context_manager()  const { return context_mgr; }
-    Ref<VectorDB>       get_vector_db()        const { return vector_db; }
-    Ref<SessionManager> get_session_manager()  const { return session_mgr; }
-    Ref<MemoryManager>  get_memory_manager()   const { return memory_mgr; }
+    Ref<AIProvider>     get_provider()        const { return provider; }
+    Ref<ToolExecutor>   get_executor()        const { return executor; }
+    Ref<ContextManager> get_context_manager() const { return context_mgr; }
+    Ref<VectorDB>       get_vector_db()       const { return vector_db; }
+    Ref<SessionManager> get_session_manager() const { return session_mgr; }
+    Ref<MemoryManager>  get_memory_manager()  const { return memory_mgr; }
 
     void send_message(const String &p_message);
     void cancel_current_request();
@@ -33,7 +33,6 @@ public:
     void reindex_codebase();
 
     Dictionary get_metrics() const;
-
     AIMetrics &get_metrics_ref() { return metrics; }
 
 protected:
@@ -55,5 +54,7 @@ private:
 
     void _on_provider_response(const String &p_response);
     void _on_tool_call_requested(const String &p_name, const Dictionary &p_args);
-    void _on_tool_output(const String &p_output);
+    // Fix 1 — new callbacks wired in initialize()
+    void _on_streaming_chunk(const String &p_chunk);
+    void _on_tool_output_received(const String &p_call_id, const String &p_result);
 };

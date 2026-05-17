@@ -10,6 +10,14 @@ void MemoryManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_fact_count"),                        &MemoryManager::get_fact_count);
     ClassDB::bind_method(D_METHOD("save_to_disk"),                          &MemoryManager::save_to_disk);
     ClassDB::bind_method(D_METHOD("load_from_disk"),                        &MemoryManager::load_from_disk);
+
+    // Fix 14 — declare all emitted signals
+    ADD_SIGNAL(MethodInfo("fact_added",
+        PropertyInfo(Variant::STRING, "id"),
+        PropertyInfo(Variant::STRING, "category")));
+    ADD_SIGNAL(MethodInfo("fact_removed",
+        PropertyInfo(Variant::STRING, "id")));
+    ADD_SIGNAL(MethodInfo("facts_cleared"));
 }
 
 String MemoryManager::_generate_id() const {
@@ -17,7 +25,6 @@ String MemoryManager::_generate_id() const {
 }
 
 void MemoryManager::add_fact(const String &category, const String &content, int confidence) {
-    // Check for duplicates
     for (const MemoryFact &f : facts) {
         if (f.category == category && f.content == content) return;
     }
@@ -35,7 +42,11 @@ void MemoryManager::add_fact(const String &category, const String &content, int 
 
 void MemoryManager::remove_fact(const String &id) {
     for (int i = facts.size() - 1; i >= 0; i--) {
-        if (facts[i].id == id) { facts.remove_at(i); return; }
+        if (facts[i].id == id) {
+            facts.remove_at(i);
+            emit_signal("fact_removed", id);
+            return;
+        }
     }
 }
 
@@ -77,11 +88,11 @@ void MemoryManager::save_to_disk() {
     Array arr;
     for (const MemoryFact &f : facts) {
         Dictionary d;
-        d["id"]           = f.id;
-        d["category"]     = f.category;
-        d["content"]      = f.content;
-        d["confidence"]   = f.confidence;
-        d["created_at_ms"]= f.created_at_ms;
+        d["id"]            = f.id;
+        d["category"]      = f.category;
+        d["content"]       = f.content;
+        d["confidence"]    = f.confidence;
+        d["created_at_ms"] = f.created_at_ms;
         arr.push_back(d);
     }
     Ref<FileAccess> file = FileAccess::open(storage_path, FileAccess::WRITE);
@@ -104,10 +115,10 @@ bool MemoryManager::load_from_disk() {
     for (int i = 0; i < arr.size(); i++) {
         Dictionary d = arr[i];
         MemoryFact f;
-        f.id            = d.get("id", "").operator String();
-        f.category      = d.get("category", "").operator String();
-        f.content       = d.get("content", "").operator String();
-        f.confidence    = d.get("confidence", 80).operator int();
+        f.id            = d.get("id",            "").operator String();
+        f.category      = d.get("category",      "").operator String();
+        f.content       = d.get("content",       "").operator String();
+        f.confidence    = d.get("confidence",    80).operator int();
         f.created_at_ms = d.get("created_at_ms", 0).operator int64_t();
         facts.push_back(f);
     }
@@ -116,6 +127,7 @@ bool MemoryManager::load_from_disk() {
 
 void MemoryManager::clear_all() {
     facts.clear();
+    emit_signal("facts_cleared");
 }
 
 void MemoryManager::clear_category(const String &category) {
@@ -125,21 +137,21 @@ void MemoryManager::clear_category(const String &category) {
 }
 
 void MemoryManager::extract_facts_from_response(const String &ai_response, const String &user_message) {
-    // Simple heuristic fact extraction
-    // In production: use a summarization prompt to extract key facts
     if (user_message.to_lower().contains("my name is")) {
         int idx = user_message.to_lower().find("my name is");
         String name = user_message.substr(idx + 11).strip_edges();
-        if (!name.is_empty()) add_fact("developer", "Developer's name: " + name.split(" ")[0]);
+        if (!name.is_empty()) {
+            add_fact("developer", "Developer's name: " + name.split(" ")[0]);
+        }
     }
-    if (user_message.to_lower().contains("making a") || user_message.to_lower().contains("building a")) {
+    if (user_message.to_lower().contains("making a") ||
+            user_message.to_lower().contains("building a")) {
         add_fact("project_type", "Project description noted from conversation");
     }
 }
 
 void MemoryManager::_compact_if_needed() {
     if (facts.size() <= max_facts) return;
-    // Remove lowest confidence facts
     while (facts.size() > max_facts) {
         int worst_idx = 0;
         for (int i = 1; i < facts.size(); i++) {
